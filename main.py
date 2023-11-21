@@ -1,6 +1,21 @@
 import requests
 from bs4 import BeautifulSoup
 import json
+from time import sleep
+import psycopg2
+from psycopg2 import sql
+from dotenv import load_dotenv
+import os
+
+load_dotenv()
+
+DB = os.getenv("DB")
+USER = os.getenv("USER")
+PASSWORD = os.getenv("PASSWORD")
+HOST = os.getenv("HOST")
+PORT = os.getenv("PORT")
+TABLE = os.getenv("TABLE")
+COLUMN = os.getenv("COLUMN")
 
 
 def clouds(data):
@@ -98,57 +113,124 @@ def temps(data):
     # 0 °C + 273 = 273 K
     return temp
 
+def dbInit():
+    connection = psycopg2.connect(
+        dbname=DB,
+        user=USER,
+        password=PASSWORD,
+        host=HOST,
+        port=PORT
+    )
 
+    cursor = connection.cursor()
 
+    create_table_query = sql.SQL("CREATE TABLE IF NOT EXISTS {} ({} TEXT);").format(
+        sql.Identifier(TABLE),
+        sql.Identifier(COLUMN)
+    )
 
-url = "https://www.gismeteo.ru/diary/4079/1997/4/"
+    cursor.execute(create_table_query)
+    connection.commit()
+    cursor.close()
+    connection.close()
 
-headers = {
-    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3'
-}
+    return
 
-response = requests.get(url, headers=headers)
-
-if response.status_code == 200:
-    soup = BeautifulSoup(response.text, 'html.parser')
-    rows = []
-
-    rows = soup.find_all('tr')
-    del rows[0]
-    del rows[0]
+def dbSend(data):
     
-    for row in rows:
-        cells = row.find_all('td')
+    connection = psycopg2.connect(
+        dbname=DB,
+        user=USER,
+        password=PASSWORD,
+        host=HOST,
+        port=PORT
+    )
 
-        data = {
-            "region": url.split("/")[-4],
-            "day": cells[0].get_text(),
-            "mounth": url.split("/")[-2],
-            "year": url.split("/")[-3],
+    cursor = connection.cursor()
+    insert_data_query = sql.SQL("INSERT INTO {} ({}) VALUES (%s);").format(
+        sql.Identifier(TABLE),
+        sql.Identifier(COLUMN)
+    )
 
-            "temperatureDay": temps(cells[1]),
-            "presherDay": cells[2].get_text(),
-            "cloudDay": clouds(cells[3]),
-            "downfallDay": downfalls(cells[4]),
-            "windDayDirection": winds(cells[5])["direction"],
-            "windDaySpeed": winds(cells[5])["speed"],
+    cursor.execute(insert_data_query, (data,))
+    connection.commit()
+    cursor.close()
+    connection.close()
+    return
 
-            "temperatureNight": temps(cells[6]),
-            "presherNight": cells[7].get_text(),
-            "cloudNight": clouds(cells[8]),
-            "downfallNight": downfalls(cells[9]),
-            "windNightDirection": winds(cells[10])["direction"],
-            "windNightSpeed": winds(cells[10])["speed"],
-        }
+def parser(url):
+    headers = {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3'
+    }
+
+    response = requests.get(url, headers=headers)
+
+    if response.status_code == 200:
+        soup = BeautifulSoup(response.text, 'html.parser')
+        rows = []
+
+        rows = soup.find_all('tr')
+        del rows[0]
+        del rows[0]
         
-        print(data)
+        for row in rows:
+            cells = row.find_all('td')
+
+            data = {
+                "region": url.split("/")[-4],
+                "day": cells[0].get_text(),
+                "mounth": url.split("/")[-2],
+                "year": url.split("/")[-3],
+
+                "temperatureDay": temps(cells[1]),
+                "presherDay": cells[2].get_text(),
+                "cloudDay": clouds(cells[3]),
+                "downfallDay": downfalls(cells[4]),
+                "windDayDirection": winds(cells[5])["direction"],
+                "windDaySpeed": winds(cells[5])["speed"],
+
+                "temperatureNight": temps(cells[6]),
+                "presherNight": cells[7].get_text(),
+                "cloudNight": clouds(cells[8]),
+                "downfallNight": downfalls(cells[9]),
+                "windNightDirection": winds(cells[10])["direction"],
+                "windNightSpeed": winds(cells[10])["speed"],
+            }
+            
+            dbSend(data)
+
+    else:
+        print(f"Error: Status code {response.status_code}")
 
 
 
 
+def main():
+
+    dbInit()
+    data = "hello"
+    dbSend(data)
+
+    data = {"year":"2017", "mounth":"4"}
+    urlO = "https://www.gismeteo.ru/diary/4079/"
 
 
-else:
-    print(f"Error: Status code {response.status_code}")
+    yearO = int(data["year"])
+    mounth = int(data["mounth"])
+    
+    r = 2024 - yearO
+    for y in range(r):
+        year = y + yearO
+        while mounth <= 12:
+            url = urlO + str(year) + "/" + str(mounth) + "/"
+            
+            # parser(url)
+            # sleep(5)
+
+            mounth += 1
+        else:
+            mounth = 1
+    return 
 
 
+main()
