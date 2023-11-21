@@ -10,10 +10,10 @@ import os
 load_dotenv()
 
 DB = os.getenv("DB")
-USER = os.getenv("USER")
-PASSWORD = os.getenv("PASSWORD")
-HOST = os.getenv("HOST")
-PORT = os.getenv("PORT")
+DB_USER = os.getenv("DB_USER")
+DB_PASSWORD = os.getenv("DB_PASSWORD")
+DB_HOST = os.getenv("DB_HOST")
+DB_PORT = os.getenv("DB_PORT")
 TABLE = os.getenv("TABLE")
 COLUMN = os.getenv("COLUMN")
 
@@ -30,6 +30,8 @@ def clouds(data):
         cloud="2"
     elif data.find("dull.png") != -1:
         cloud="3"
+    else:
+        cloud="0"
     # ясно - 0
     # sun.png
 
@@ -107,8 +109,16 @@ def winds(data):
     return wind
 
 def temps(data):
-    data = data.get_text()
-    temp = int(data)+ 273
+    string = data.get_text()
+    numberString = ""
+    for later in string:
+        if later.isdigit():
+            numberString= numberString+ later
+    
+    if numberString == "":
+        numberString = 0
+
+    temp = int(numberString) + 273
     tem = str(temp)
     # 0 °C + 273 = 273 K
     return temp
@@ -116,10 +126,10 @@ def temps(data):
 def dbInit():
     connection = psycopg2.connect(
         dbname=DB,
-        user=USER,
-        password=PASSWORD,
-        host=HOST,
-        port=PORT
+        user=DB_USER,
+        password=DB_PASSWORD,
+        host=DB_HOST,
+        port=DB_PORT
     )
 
     cursor = connection.cursor()
@@ -137,13 +147,13 @@ def dbInit():
     return
 
 def dbSend(data):
-    
+    data = str(data)
     connection = psycopg2.connect(
         dbname=DB,
-        user=USER,
-        password=PASSWORD,
-        host=HOST,
-        port=PORT
+        user=DB_USER,
+        password=DB_PASSWORD,
+        host=DB_HOST,
+        port=DB_PORT
     )
 
     cursor = connection.cursor()
@@ -178,9 +188,10 @@ def parser(url):
 
             data = {
                 "region": url.split("/")[-4],
-                "day": cells[0].get_text(),
-                "mounth": url.split("/")[-2],
+
                 "year": url.split("/")[-3],
+                "mounth": url.split("/")[-2],
+                "day": cells[0].get_text(),
 
                 "temperatureDay": temps(cells[1]),
                 "presherDay": cells[2].get_text(),
@@ -198,6 +209,10 @@ def parser(url):
             }
             
             dbSend(data)
+            print("//__//__//__//__")
+            print(data)
+            sleep(3)
+
 
     else:
         print(f"Error: Status code {response.status_code}")
@@ -208,8 +223,7 @@ def parser(url):
 def main():
 
     dbInit()
-    data = "hello"
-    dbSend(data)
+
 
     data = {"year":"2017", "mounth":"4"}
     urlO = "https://www.gismeteo.ru/diary/4079/"
@@ -223,9 +237,9 @@ def main():
         year = y + yearO
         while mounth <= 12:
             url = urlO + str(year) + "/" + str(mounth) + "/"
-            
-            # parser(url)
-            # sleep(5)
+
+            parser(url)
+            print(year, mounth)
 
             mounth += 1
         else:
