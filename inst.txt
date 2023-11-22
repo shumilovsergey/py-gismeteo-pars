@@ -3,6 +3,7 @@ virtualenv env
 source env/bin/activate (unix)
 env\Scripts\activate (windows)
 Set-ExecutionPolicy RemoteSigned (if needed)
+deactivate
 
 pip install beautifulsoup4
 pip install requests

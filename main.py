@@ -19,18 +19,21 @@ COLUMN = os.getenv("COLUMN")
 
 
 def clouds(data):
-    data = data.find('img', class_='label_icon label_small screen_icon')
-    data = str(data['src'])
+    try:
+        data = data.find('img', class_='label_icon label_small screen_icon')
+        data = str(data['src'])
 
-    if data.find("sun.png") != -1:
-        cloud="0"
-    elif data.find("sunc.png") != -1:
-        cloud="1"
-    elif data.find("suncl.png") != -1:
-        cloud="2"
-    elif data.find("dull.png") != -1:
-        cloud="3"
-    else:
+        if data.find("sun.png") != -1:
+            cloud="0"
+        elif data.find("sunc.png") != -1:
+            cloud="1"
+        elif data.find("suncl.png") != -1:
+            cloud="2"
+        elif data.find("dull.png") != -1:
+            cloud="3"
+        else:
+            cloud="0"
+    except:
         cloud="0"
     # ясно - 0
     # sun.png
@@ -46,19 +49,23 @@ def clouds(data):
     return cloud
 
 def downfalls(data):
-    data = data.find('img', class_='label_icon label_small screen_icon')
+    try:
+        data = data.find('img', class_='label_icon label_small screen_icon')
 
-    if data:
-        data = str(data['src'])
-        if data.find("rain.png") != -1:
-            downfall = "1"
-        elif data.find("snow.png") != -1:
-            downfall = "2"
-        elif data.find("storm.png") != -1:
-            downfall = "3"
-    else:
+        if data:
+            data = str(data['src'])
+            if data.find("rain.png") != -1:
+                downfall = "1"
+            elif data.find("snow.png") != -1:
+                downfall = "2"
+            elif data.find("storm.png") != -1:
+                downfall = "3"
+            else:
+                downfall = "0"
+        else:
+            downfall = "0"
+    except:
         downfall = "0"
-
     #  пусто - 0
     #  
     # дождь - 1
@@ -92,7 +99,8 @@ def winds(data):
                 direction = '6'
             case "СЗ":
                 direction = '7'
-
+            case "":
+                direction = "0"
         speed = data[1].replace('м/с', '')
 
         wind = {'direction': direction, 'speed': speed}
@@ -109,18 +117,20 @@ def winds(data):
     return wind
 
 def temps(data):
-    string = data.get_text()
-    numberString = ""
-    for later in string:
-        if later.isdigit():
-            numberString= numberString+ later
-    
-    if numberString == "":
-        numberString = 0
+    try:
+        string = data.get_text()
+        numberString = ""
+        for later in string:
+            if later.isdigit():
+                numberString= numberString+ later
+        
+        if numberString == "":
+            numberString = 0
 
-    temp = int(numberString) + 273
-    tem = str(temp)
-    # 0 °C + 273 = 273 K
+        temp = int(numberString) + 273
+        # 0 °C + 273 = 273 K
+    except:
+        temp = 273
     return temp
 
 def dbInit():
@@ -224,8 +234,7 @@ def main():
 
     dbInit()
 
-
-    data = {"year":"2017", "mounth":"4"}
+    data = {"year":"2015", "mounth":"11"}
     urlO = "https://www.gismeteo.ru/diary/4079/"
 
 
@@ -239,7 +248,6 @@ def main():
             url = urlO + str(year) + "/" + str(mounth) + "/"
 
             parser(url)
-            print(year, mounth)
 
             mounth += 1
         else:
